@@ -52,6 +52,10 @@ INTENT_KEYWORDS: dict[str, list[str]] = {
         "schedule", "meeting", "appointment", "book", "calendar",
         "slot", "available", "availability", "plan",
     ],
+    IntentEnum.chitchat: [
+        "hi", "hello", "hey", "how are you", "whats up", "good morning",
+        "greetings", "yo", "good evening",
+    ],
 }
 
 # Subject-area keywords used ONLY for intent classification (not stripped from topics)
@@ -328,6 +332,8 @@ class MLParser(RuleBasedParser):
     """
     def __init__(self):
         try:
+            import os
+            os.environ["HF_HUB_OFFLINE"] = "1"
             import joblib
             from sentence_transformers import SentenceTransformer
         except ImportError:
@@ -351,18 +357,26 @@ class MLParser(RuleBasedParser):
         classes = self.classifier.classes_
         best_idx = probas.argmax()
         
-        result.intent = classes[best_idx]
         confidence = float(probas[best_idx])
         
-        # 2. Extract specific entities using existing robust regex rules
+        CONFIDENCE_THRESHOLD = 0.60
+        if confidence < CONFIDENCE_THRESHOLD:
+            result.intent = IntentEnum.unknown
+        else:
+            result.intent = classes[best_idx]
+            
+        # 2. Smart Entity Extraction Upgrade (Zero-Shot using Embedder)
         team_size, _ = self._extract_team_size(text)
         result.team_size = team_size
 
         timeframe, _ = self._extract_timeframe(text)
         result.timeframe = timeframe
 
-        topic, _ = self._extract_topic(text, result.intent)
-        result.topic = topic
+        try:
+            result.topic = self._extract_topic_zero_shot(text)
+        except Exception:
+            topic, _ = self._extract_topic(text, result.intent)
+            result.topic = topic
 
         result.urgency = self._extract_urgency(text, timeframe)
 
@@ -371,6 +385,35 @@ class MLParser(RuleBasedParser):
         result.method = "local_ml"
         
         return result
+
+    def _extract_topic_zero_shot(self, text: str) -> str:
+        text_lower = text.lower()
+        import re
+        import numpy as np
+        
+        words = re.findall(r"\b[a-zA-Z]{3,}\b", text_lower)
+        candidates = []
+        for i in range(len(words)):
+            if words[i] not in STOPWORDS:
+                candidates.append(words[i])
+                # bi-gram
+                if i < len(words) - 1 and words[i+1] not in STOPWORDS:
+                    candidates.append(f"{words[i]} {words[i+1]}")
+                    
+        if not candidates:
+            return "general"
+            
+        target_embedding = self.embedder.encode([text])[0]
+        cand_embeddings = self.embedder.encode(candidates)
+        
+        # Calculate cosine similarity
+        target_norm = target_embedding / np.linalg.norm(target_embedding)
+        cand_norms = cand_embeddings / np.linalg.norm(cand_embeddings, axis=1, keepdims=True)
+        
+        similarities = np.dot(cand_norms, target_norm)
+        best_idx = np.argmax(similarities)
+        
+        return candidates[best_idx]
 
 
 _ML_PARSER_INSTANCE: MLParser | None = None

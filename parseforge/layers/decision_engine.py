@@ -94,6 +94,10 @@ def _score(request: ParsedRequest, validation: ValidationResult) -> tuple[int, d
     """Compute score and return it alongside a human-readable breakdown."""
     breakdown: dict[str, int] = {}
 
+    # Intercept conversational chatter completely
+    if request.intent == "chitchat":
+        return 30, {"chitchat_detected": 30}
+
     # +30: known intent
     if request.intent != "unknown":
         breakdown["known_intent"] = 30
@@ -151,6 +155,9 @@ def _build_reason(
 ) -> str:
     earned = ", ".join(f"{k}(+{v})" for k, v in breakdown.items())
     base = f"Score {score}/100 [{earned}]."
+
+    if "chitchat_detected" in breakdown:
+        return "Score 30/100 [chitchat_detected(+30)]. Hi there! I am ParseForge. What kind of project or gig do you need help with?"
 
     tips: dict[str, str] = {
         ActionEnum.match: f"Request is well-defined — routing to match engine for '{request.topic}'.",

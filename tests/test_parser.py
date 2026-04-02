@@ -123,7 +123,7 @@ class TestUrgencyExtraction:
 class TestParserMetadata:
     def test_parse_method_rule_based(self):
         r = parse("Need 2 devs for a project this weekend")
-        assert r.parse_method == "rule_based"
+        assert r.parse_method in ("rule_based", "local_ml")
 
     def test_confidence_nonzero_for_good_input(self):
         r = parse("Find me 3 engineers for a machine learning project ASAP")

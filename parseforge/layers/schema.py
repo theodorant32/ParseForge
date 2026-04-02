@@ -22,6 +22,7 @@ class IntentEnum(str, Enum):
     help = "help"
     project = "project"
     scheduling = "scheduling"
+    chitchat = "chitchat"
     unknown = "unknown"
 
 

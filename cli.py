@@ -299,6 +299,62 @@ def interactive(skip_enrichment: bool, verbose: bool):
 
 
 # ---------------------------------------------------------------------------
+# feedback command (Active Learning Data Flywheel)
+# ---------------------------------------------------------------------------
+@cli.command()
+@click.argument("trace_id")
+@click.argument("correct_intent")
+def feedback(trace_id: str, correct_intent: str):
+    """Correct a misclassification and auto-train the ML model."""
+    import subprocess
+    
+    # Check if intent is valid
+    from parseforge.layers.schema import IntentEnum
+    try:
+        IntentEnum(correct_intent)
+    except ValueError:
+        click.echo(_c(f"❌ Invalid intent '{correct_intent}'. Available intents: {[e.value for e in IntentEnum]}", Fore.RED))
+        sys.exit(1)
+        
+    store = RequestStore()
+    results_path = store.log_path
+    
+    if not results_path.exists():
+        click.echo(_c("❌ No results found. Run pipeline with --save first.", Fore.RED))
+        sys.exit(1)
+        
+    target_text = None
+    with open(results_path, "r", encoding="utf-8") as f:
+        for line in f:
+            if not line.strip(): continue
+            record = json.loads(line)
+            if record.get("trace_id") == trace_id:
+                target_text = record.get("raw_input")
+                break
+                
+    if not target_text:
+        click.echo(_c(f"❌ Could not find trace_id {trace_id} in {results_path}", Fore.RED))
+        sys.exit(1)
+        
+    # Append to training data
+    train_path = Path("data/training_data.jsonl")
+    with open(train_path, "a", encoding="utf-8") as f:
+        f.write(json.dumps({"text": target_text, "intent": correct_intent}) + "\n")
+        
+    click.echo(_c(f"✅ Added to training data: '{target_text}' -> {correct_intent}", Fore.GREEN))
+    
+    click.echo(_c("🚀 Triggering ML Retraining automatically...\n", Fore.CYAN))
+    
+    result = subprocess.run([sys.executable, "train.py"], capture_output=True, text=True)
+    if result.returncode == 0:
+        click.echo(_c("✅ Model retrained successfully! The Data Flywheel spins...", Fore.MAGENTA + Style.BRIGHT))
+    else:
+        click.echo(_c("❌ Model retraining failed. Check train.py output:", Fore.RED))
+        click.echo(result.stderr)
+        sys.exit(1)
+
+
+# ---------------------------------------------------------------------------
 # serve command
 # ---------------------------------------------------------------------------
 @cli.command()

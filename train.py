@@ -46,7 +46,7 @@ def train_model():
     X_embeddings = embedder.encode(texts, show_progress_bar=True)
 
     print("\n4. Training Logistic Regression directly on concepts...")
-    model = LogisticRegression(C=1.0, class_weight="balanced", max_iter=500, random_state=42)
+    model = LogisticRegression(C=0.5, class_weight="balanced", max_iter=1000, random_state=42)
     model.fit(X_embeddings, labels)
 
     acc = model.score(X_embeddings, labels)
