@@ -1,0 +1,152 @@
+[
+  {
+    "input": "Find me 2 people for a robotics project this weekend",
+    "expected_action": "match",
+    "expected_status": "valid",
+    "description": "Happy path: project with team size, topic, timeframe"
+  },
+  {
+    "input": "I need help with calculus tomorrow",
+    "expected_action": "match",
+    "expected_status": "valid",
+    "description": "Happy path: help request with topic and timeframe"
+  },
+  {
+    "input": "Looking for a designer for a quick gig",
+    "expected_action": "queue",
+    "expected_status": "valid",
+    "description": "Happy path: gig request, no timeframe specified"
+  },
+  {
+    "input": "Need a team of 5 for a machine learning hackathon next week",
+    "expected_action": "match",
+    "expected_status": "valid",
+    "description": "Happy path: full project details"
+  },
+  {
+    "input": "ASAP I need 3 developers for my fintech startup",
+    "expected_action": "match",
+    "expected_status": "valid",
+    "description": "Happy path: high urgency startup project"
+  },
+  {
+    "input": "Schedule a team meeting for next Monday",
+    "expected_action": "match",
+    "expected_status": "valid",
+    "description": "Happy path: scheduling intent"
+  },
+  {
+    "input": "Looking for a co-founder for my AI startup, no rush",
+    "expected_action": "queue",
+    "expected_status": "valid",
+    "description": "Low urgency, co-founder request"
+  },
+  {
+    "input": "I want to find 4 people for a biology research project this month",
+    "expected_action": "match",
+    "expected_status": "valid",
+    "description": "Happy path: research project with all fields"
+  },
+  {
+    "input": "help me",
+    "expected_action": "clarify",
+    "expected_status": "needs_clarification",
+    "description": "Edge case: vague request — no topic, no timeframe"
+  },
+  {
+    "input": "something soon",
+    "expected_action": "clarify",
+    "expected_status": "needs_clarification",
+    "description": "Edge case: minimal vague input"
+  },
+  {
+    "input": "find someone",
+    "expected_action": "clarify",
+    "expected_status": "needs_clarification",
+    "description": "Edge case: no topic, no timeframe, no team size"
+  },
+  {
+    "input": "I need help",
+    "expected_action": "clarify",
+    "expected_status": "needs_clarification",
+    "description": "Edge case: intent detected but no topic or timeframe"
+  },
+  {
+    "input": "urgent project, no rush — I don't know what I need",
+    "expected_action": "clarify",
+    "expected_status": "needs_clarification",
+    "description": "Edge case: contradictory urgency signals"
+  },
+  {
+    "input": "Find me 0 people for a project",
+    "expected_action": "match",
+    "expected_status": "auto_corrected",
+    "description": "Edge case: team_size=0 — auto-corrected to 1"
+  },
+  {
+    "input": "I need 150 people for a software project tomorrow",
+    "expected_action": "match",
+    "expected_status": "auto_corrected",
+    "description": "Edge case: team_size over 100 — clamped to 100"
+  },
+  {
+    "input": "Need a developer for a project yesterday",
+    "expected_action": "reject",
+    "expected_status": "invalid",
+    "description": "Edge case: past timeframe — rejection expected"
+  },
+  {
+    "input": "Looking for someone last week for a design task",
+    "expected_action": "reject",
+    "expected_status": "invalid",
+    "description": "Edge case: past timeframe (last week)"
+  },
+  {
+    "input": "Find me a frontend developer for a web app project this weekend, urgent!",
+    "expected_action": "match",
+    "expected_status": "valid",
+    "description": "Happy path: complete request with urgency"
+  },
+  {
+    "input": "Looking for a physics tutor available on Saturday",
+    "expected_action": "match",
+    "expected_status": "valid",
+    "description": "Happy path: tutoring/scheduling with day of week"
+  },
+  {
+    "input": "Need 2 engineers for a blockchain project ASAP",
+    "expected_action": "match",
+    "expected_status": "valid",
+    "description": "Happy path: urgent team project"
+  },
+  {
+    "input": "Can you help me find someone for a graphic design gig next month?",
+    "expected_action": "match",
+    "expected_status": "valid",
+    "description": "Happy path: gig with timeframe"
+  },
+  {
+    "input": "",
+    "expected_action": "reject",
+    "expected_status": "invalid",
+    "description": "Edge case: completely empty string"
+  },
+  {
+    "input": "ab",
+    "expected_action": "reject",
+    "expected_status": "invalid",
+    "description": "Edge case: too short (2 chars) — InputError"
+  },
+  {
+    "input": "I need an experienced data scientist who specializes in NLP for a long-term AI research contract starting next quarter",
+    "expected_action": "match",
+    "expected_status": "valid",
+    "description": "Complex: detailed gig with domain expertise"
+  },
+  {
+    "input": "hello world this is a random message with no meaningful content at all",
+    "expected_action": "clarify",
+    "expected_status": "needs_clarification",
+    "description": "Edge case: no intent keywords present"
+  }
+]

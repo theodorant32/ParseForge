@@ -1,0 +1,19 @@
+# Python data
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.env
+
+# Tests and Logs
+.pytest_cache/
+logs/
+*.log
+
+# Data and Models
+data/
+*.pkl
+*.jsonl
+
+# Scratch files
+example*.txt
