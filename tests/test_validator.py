@@ -1,4 +1,3 @@
-"""tests/test_validator.py — Unit tests for the validation layer."""
 import pytest
 from parseforge.layers import validator
 from parseforge.layers.schema import ParsedRequest, IntentEnum, UrgencyEnum, ValidationStatus
@@ -87,7 +86,6 @@ class TestClarificationRequired:
     def test_unknown_intent_specific_topic_passes(self):
         req = make_request(intent=IntentEnum.unknown, topic="robotics")
         _, result = validator.process(req)
-        # Should pass with warning — not needs_clarification
         assert result.status != ValidationStatus.invalid
 
 

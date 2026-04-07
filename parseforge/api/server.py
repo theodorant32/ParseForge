@@ -1,15 +1,3 @@
-"""
-parseforge/api/server.py
-
-FastAPI API Layer — exposes the pipeline over HTTP.
-
-Endpoints:
-  POST /pipeline/run    — single input → PipelineResult
-  POST /pipeline/batch  — list of inputs → list of PipelineResults
-  GET  /pipeline/history — recent stored results
-  GET  /health          — health check
-"""
-
 from __future__ import annotations
 
 import asyncio
@@ -41,9 +29,6 @@ app.add_middleware(
 store = RequestStore()
 
 
-# ---------------------------------------------------------------------------
-# Request / Response models
-# ---------------------------------------------------------------------------
 class RunRequest(BaseModel):
     text: str = Field(..., min_length=1, description="Raw user input text.")
     skip_enrichment: bool = Field(False, description="Skip the enrichment stage.")
@@ -55,10 +40,6 @@ class BatchRunRequest(BaseModel):
     skip_enrichment: bool = False
 
 
-# ---------------------------------------------------------------------------
-# Routes
-# ---------------------------------------------------------------------------
-
 @app.get("/health", tags=["Meta"])
 async def health() -> dict[str, str]:
     return {"status": "ok", "version": "1.0.0"}
@@ -66,7 +47,6 @@ async def health() -> dict[str, str]:
 
 @app.post("/pipeline/run", tags=["Pipeline"])
 async def pipeline_run(body: RunRequest) -> dict[str, Any]:
-    """Run the full pipeline on a single input."""
     logger.info("api_run_request", input_length=len(body.text))
     result = await asyncio.get_event_loop().run_in_executor(
         None,
@@ -78,7 +58,6 @@ async def pipeline_run(body: RunRequest) -> dict[str, Any]:
 
 @app.post("/pipeline/batch", tags=["Pipeline"])
 async def pipeline_batch(body: BatchRunRequest) -> dict[str, Any]:
-    """Run the pipeline on multiple inputs concurrently."""
     logger.info("api_batch_request", count=len(body.inputs))
 
     loop = asyncio.get_event_loop()
@@ -107,7 +86,6 @@ async def pipeline_batch(body: BatchRunRequest) -> dict[str, Any]:
 
 @app.get("/pipeline/history", tags=["Pipeline"])
 async def pipeline_history(limit: int = Query(20, ge=1, le=200)) -> dict[str, Any]:
-    """Return recent pipeline results from persistence."""
     all_results = store.load_decisions()
-    recent = all_results[-limit:][::-1]  # newest first
+    recent = all_results[-limit:][::-1]
     return {"count": len(recent), "results": recent}

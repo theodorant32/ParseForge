@@ -1,4 +1,3 @@
-"""tests/test_decision_engine.py — Unit tests for the decision engine."""
 import pytest
 from parseforge.layers import decision_engine
 from parseforge.layers.schema import (
@@ -48,12 +47,11 @@ class TestScoringAndAction:
     def test_unknown_intent_lowers_score(self):
         req = make_request(intent=IntentEnum.unknown)
         result = decision_engine.process(req, clean_validation())
-        assert result.score < 70  # loses 30 points for unknown intent
+        assert result.score < 70
 
     def test_general_topic_lowers_score(self):
         req = make_request(topic="general")
         result = decision_engine.process(req, clean_validation())
-        # Loses 20 points for generic topic
         assert result.score <= 90
 
     def test_unknown_intent_no_topic_gets_clarify_or_queue(self):

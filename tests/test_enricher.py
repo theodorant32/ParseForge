@@ -1,4 +1,3 @@
-"""tests/test_enricher.py — Unit tests for the enrichment layer."""
 import pytest
 from parseforge.layers import enricher
 from parseforge.layers.schema import IntentEnum, ParsedRequest, UrgencyEnum
@@ -22,13 +21,13 @@ class TestMetadataEnrichment:
         req = make_request()
         enriched = enricher.process(req)
         assert enriched.request_id != ""
-        assert len(enriched.request_id) == 36  # UUID format
+        assert len(enriched.request_id) == 36
 
     def test_timestamp_added(self):
         req = make_request()
         enriched = enricher.process(req)
         assert enriched.timestamp != ""
-        assert "T" in enriched.timestamp  # ISO 8601
+        assert "T" in enriched.timestamp
 
     def test_pipeline_version_set(self):
         req = make_request()
@@ -78,7 +77,7 @@ class TestTeamSizeInference:
     def test_solo_keyword_infers_team_size_1(self):
         req = make_request(team_size=1, raw_input="I want to work solo on this project")
         enriched = enricher.process(req)
-        assert enriched.team_size == 1  # confirmed as 1
+        assert enriched.team_size == 1
 
     def test_partner_keyword_infers_team_size_2(self):
         req = make_request(team_size=1, raw_input="Looking for a partner for this gig")
@@ -88,7 +87,7 @@ class TestTeamSizeInference:
     def test_explicit_team_size_not_overwritten(self):
         req = make_request(team_size=5, raw_input="Find me a partner for my team of 5")
         enriched = enricher.process(req)
-        assert enriched.team_size == 5  # explicit value preserved
+        assert enriched.team_size == 5
 
 
 class TestTimeframeNormalization:
@@ -115,7 +114,6 @@ class TestTimeframeNormalization:
 
 class TestEnrichmentNonFatal:
     def test_returns_request_even_if_enrichment_partial(self):
-        """Enricher should never crash — always returns a ParsedRequest."""
         req = make_request()
         result = enricher.process(req)
         assert isinstance(result, ParsedRequest)

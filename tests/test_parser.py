@@ -1,4 +1,3 @@
-"""tests/test_parser.py — Unit tests for the parsing layer."""
 import pytest
 from parseforge.layers import parser
 from parseforge.layers.schema import IntentEnum, UrgencyEnum
@@ -27,7 +26,6 @@ class TestIntentExtraction:
 
     def test_unknown_intent_fallback(self):
         r = parse("hello world random text")
-        # No hard assert on unknown — just confirm it doesn't crash
         assert r.intent is not None
 
     def test_task_intent(self):
@@ -50,7 +48,7 @@ class TestTeamSizeExtraction:
 
     def test_no_team_size_defaults(self):
         r = parse("I need help with calculus")
-        assert r.team_size >= 0  # 0 means unspecified, validator fixes it
+        assert r.team_size >= 0
 
     def test_need_n_pattern(self):
         r = parse("I need 4 engineers this weekend")
@@ -98,7 +96,6 @@ class TestTopicExtraction:
 
     def test_default_topic_when_vague(self):
         r = parse("I need some help please")
-        # Should be general or a reasonable guess
         assert r.topic is not None
 
 

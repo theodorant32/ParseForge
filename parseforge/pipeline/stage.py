@@ -1,10 +1,3 @@
-"""
-parseforge/pipeline/stage.py
-
-Stage base class and StageResult model.
-Every pipeline stage produces a StageResult that the orchestrator collects.
-"""
-
 from __future__ import annotations
 
 import time
@@ -14,10 +7,8 @@ from pydantic import BaseModel, Field
 
 
 class StageResult(BaseModel):
-    """The output wrapper produced by each pipeline stage."""
-
     stage: str
-    status: str  # "success" | "warning" | "failed" | "skipped"
+    status: str
     input_summary: dict[str, Any] = Field(default_factory=dict)
     output_summary: dict[str, Any] = Field(default_factory=dict)
     warnings: list[str] = Field(default_factory=list)
@@ -28,8 +19,6 @@ class StageResult(BaseModel):
 
 
 class Timer:
-    """Simple context manager for timing a stage."""
-
     def __init__(self):
         self._start: float = 0.0
         self.elapsed_ms: float = 0.0

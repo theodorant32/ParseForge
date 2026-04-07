@@ -1,18 +1,3 @@
-"""
-parseforge/pipeline/orchestrator.py
-
-Pipeline Orchestrator — wires all 6 stages together and runs them in order:
-
-  input → parse → validate → enrich → decide
-
-Features:
-  - Per-stage StageResult with timing
-  - Retry logic (up to MAX_RETRIES) on transient failures
-  - Skip enrichment via `skip_enrichment=True`
-  - Full PipelineResult with trace_id, all stage results, and final decision
-  - Graceful degradation: catches expected errors and short-circuits cleanly
-"""
-
 from __future__ import annotations
 
 import time
@@ -43,9 +28,6 @@ logger = get_logger(__name__)
 MAX_RETRIES = 2
 
 
-# ---------------------------------------------------------------------------
-# PipelineResult — the full output of a run
-# ---------------------------------------------------------------------------
 class PipelineResult(BaseModel):
     trace_id: str
     raw_input: str
@@ -60,29 +42,17 @@ class PipelineResult(BaseModel):
     model_config = {"arbitrary_types_allowed": True}
 
 
-# ---------------------------------------------------------------------------
-# Orchestrator
-# ---------------------------------------------------------------------------
 class PipelineOrchestrator:
     def __init__(self, skip_enrichment: bool = False, trace_id: str | None = None):
         self.skip_enrichment = skip_enrichment
         self.trace_id = set_trace_id(trace_id)
 
     def run(self, raw_input: str) -> PipelineResult:
-        """
-        Execute the full pipeline on raw_input and return a PipelineResult.
-        Never raises — all errors are captured inside the result.
-        """
         wall_start = time.perf_counter()
         stages: list[StageResult] = []
 
-        logger.info(
-            "pipeline_start",
-            trace_id=self.trace_id,
-            skip_enrichment=self.skip_enrichment,
-        )
+        logger.info("pipeline_start", trace_id=self.trace_id, skip_enrichment=self.skip_enrichment)
 
-        # Accumulate state across stages
         cleaned_input: str | None = None
         parsed: ParsedRequest | None = None
         validated: ParsedRequest | None = None
@@ -90,9 +60,6 @@ class PipelineOrchestrator:
         enriched: ParsedRequest | None = None
         decision: DecisionResult | None = None
 
-        # -----------------------------------------------------------------------
-        # Stage 1: Input
-        # -----------------------------------------------------------------------
         stage, cleaned_input = self._run_stage(
             name="input",
             fn=lambda: input_layer.process(raw_input),
@@ -103,9 +70,6 @@ class PipelineOrchestrator:
         if stage.status == "failed":
             return self._finalize(raw_input, stages, None, None, None, stage.errors[0], wall_start)
 
-        # -----------------------------------------------------------------------
-        # Stage 2: Parser
-        # -----------------------------------------------------------------------
         stage, parsed = self._run_stage(
             name="parser",
             fn=lambda: parser.process(cleaned_input),
@@ -116,9 +80,6 @@ class PipelineOrchestrator:
         if stage.status == "failed":
             return self._finalize(raw_input, stages, None, None, None, stage.errors[0], wall_start)
 
-        # -----------------------------------------------------------------------
-        # Stage 3: Validator
-        # -----------------------------------------------------------------------
         def _validate():
             req, vres = validator.process(parsed)
             return (req, vres)
@@ -128,7 +89,7 @@ class PipelineOrchestrator:
             fn=_validate,
             input_summary={"intent": parsed.intent, "team_size": parsed.team_size},
             output_key="status",
-            retry_on=(ValidationError,),  # don't retry validation errors
+            retry_on=(ValidationError,),
         )
         stages.append(stage)
         if stage.status == "failed":
@@ -136,9 +97,6 @@ class PipelineOrchestrator:
 
         validated, validation_result = val_tuple
 
-        # -----------------------------------------------------------------------
-        # Stage 4: Enricher (skippable)
-        # -----------------------------------------------------------------------
         if self.skip_enrichment:
             enriched = validated
             stages.append(StageResult(
@@ -154,15 +112,12 @@ class PipelineOrchestrator:
                 fn=lambda: enricher.process(validated),
                 input_summary={"timeframe": validated.timeframe, "urgency": validated.urgency},
                 output_key="urgency",
-                fatal=False,  # enrichment failure → use validated as-is
+                fatal=False,
             )
             stages.append(stage)
             if enriched is None:
-                enriched = validated  # fallback
+                enriched = validated
 
-        # -----------------------------------------------------------------------
-        # Stage 5: Decision Engine
-        # -----------------------------------------------------------------------
         stage, decision = self._run_stage(
             name="decision_engine",
             fn=lambda: decision_engine.process(enriched, validation_result),
@@ -181,17 +136,8 @@ class PipelineOrchestrator:
                 stage.errors[0], wall_start,
             )
 
-        logger.info(
-            "pipeline_complete",
-            action=decision.action,
-            priority=decision.priority,
-            score=decision.score,
-        )
+        logger.info("pipeline_complete", action=decision.action, priority=decision.priority, score=decision.score)
         return self._finalize(raw_input, stages, enriched, validation_result, decision, None, wall_start)
-
-    # ---------------------------------------------------------------------------
-    # Internal helpers
-    # ---------------------------------------------------------------------------
 
     def _run_stage(
         self,
@@ -202,11 +148,6 @@ class PipelineOrchestrator:
         fatal: bool = True,
         retry_on: tuple = (),
     ) -> tuple[StageResult, Any]:
-        """
-        Run a stage function with retry logic and timing.
-        Returns (StageResult, result_value).
-        result_value is None on failure.
-        """
         set_stage(name)
         logger.debug(f"{name}_stage_enter", **input_summary)
 
@@ -220,7 +161,6 @@ class PipelineOrchestrator:
                     output_summary = {}
                     if output_key and result is not None:
                         val = result
-                        # Handle tuples (validator returns (ParsedRequest, ValidationResult))
                         if isinstance(result, tuple):
                             val = result[0]
                         try:
@@ -239,22 +179,16 @@ class PipelineOrchestrator:
                     return stage_result, result
 
                 except (InputError, ParseError, ValidationError, DecisionError) as exc:
-                    # Domain errors — don't retry
                     last_error = exc
                     break
 
                 except Exception as exc:
                     last_error = exc
                     if attempt < attempts + 1:
-                        logger.warning(
-                            f"{name}_retry",
-                            attempt=attempt,
-                            error=str(exc),
-                        )
+                        logger.warning(f"{name}_retry", attempt=attempt, error=str(exc))
                     else:
                         break
 
-        # Stage failed
         error_msg = str(last_error) if last_error else "Unknown error"
         err_dict = (
             last_error.to_dict()
@@ -297,16 +231,5 @@ class PipelineOrchestrator:
         )
 
 
-# ---------------------------------------------------------------------------
-# Convenience function
-# ---------------------------------------------------------------------------
-def run(
-    raw_input: str,
-    skip_enrichment: bool = False,
-    trace_id: str | None = None,
-) -> PipelineResult:
-    """Run the full pipeline. Convenience wrapper around PipelineOrchestrator."""
-    return PipelineOrchestrator(
-        skip_enrichment=skip_enrichment,
-        trace_id=trace_id,
-    ).run(raw_input)
+def run(raw_input: str, skip_enrichment: bool = False, trace_id: str | None = None) -> PipelineResult:
+    return PipelineOrchestrator(skip_enrichment=skip_enrichment, trace_id=trace_id).run(raw_input)
